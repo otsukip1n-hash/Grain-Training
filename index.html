@@ -81,7 +81,7 @@ details ol{margin:6px 0 2px;padding-left:20px}
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const $=id=>document.getElementById(id);
 const G=9.8,VIEW=12;
-let DAMP=0.025,ACC=6,BRAKE=6,VMAX=1.0,XLIM=10,LMIN=1.5,LMAX=6,HOIST=1.0,L0=4;
+let DAMP=0.025,ACC=6,BRAKE=6,VMAX=0.5,XLIM=10,LMIN=1.5,LMAX=6,HOIST=1.0,L0=4;
 let L=4,hd=0,lv=0;
 let x=0,v=0,th=0,w=0,dir=0,a=0,calmT=0,W=0,H=0,dpr=1,C={};
 function readColors(){const s=getComputedStyle(document.documentElement);['bg','fg','sub','girder','trolley','rope','load','floor','ok','warn'].forEach(k=>C[k]=s.getPropertyValue('--'+k).trim());}
