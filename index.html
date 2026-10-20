@@ -185,7 +185,7 @@ bindH('bUp',-1);bindH('bDn',1);
 addEventListener('keydown',e=>{if(e.key==='ArrowLeft')dir=-1;if(e.key==='ArrowRight')dir=1;if(e.key==='ArrowUp')hd=-1;if(e.key==='ArrowDown')hd=1;});
 addEventListener('keyup',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight')dir=0;if(e.key==='ArrowUp'||e.key==='ArrowDown')hd=0;});
 $('bReset').onclick=reset;$('bShake').onclick=shake;
-const DEF={vmax:1,accT:.17,brkT:.17,l0:4,lmin:1.5,lmax:6,hoist:1,damp:.025};
+const DEF={vmax:0.5,accT:.17,brkT:.17,l0:4,lmin:1.5,lmax:6,hoist:1,damp:.025};
 const META=[['vmax','トロリー最高速度 (m/s)',.3,3,.1],['accT','最高速度までの加速時間 (秒)',.05,2,.05],['brkT','停止までの減速時間 (秒)',.05,2,.05],['l0','初期ロープ長 (m)',1.5,6,.1],['lmin','最短ロープ長 (m)',1,5,.1],['lmax','最長ロープ長 (m)',3,8,.1],['hoist','巻き上げ下げ速度 (m/s)',.2,3,.1],['damp','減衰（大きいほど収まりやすい）',0,.2,.005]];
 let S={...DEF};try{Object.assign(S,JSON.parse(localStorage.getItem('craneS')||'{}'))}catch(e){}
 function applyS(){VMAX=S.vmax;ACC=S.vmax/S.accT;BRAKE=S.vmax/S.brkT;L0=S.l0;LMAX=S.lmax;LMIN=Math.min(S.lmin,S.lmax-.5);HOIST=S.hoist;DAMP=S.damp;L=Math.max(LMIN,Math.min(LMAX,L));x=Math.max(0,Math.min(XLIM,x));}
