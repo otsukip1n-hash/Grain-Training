@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>クレーン振れ止め練習</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2f7de1">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#eef2f6;--fg:#1d2733;--sub:#5b6b7c;--girder:#6b7a8a;--trolley:#e0a100;--rope:#333;--load:#2f7de1;--floor:#c9d3dd;--card:#fff;--ok:#1a9d55;--warn:#d9480f;--btn:#2f7de1;--btnfg:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10161d;--fg:#e8eef4;--sub:#9aabbb;--girder:#8a9aab;--trolley:#f0b429;--rope:#cfd8e0;--load:#4c9aff;--floor:#27323d;--card:#1a232d;--ok:#3ccf82;--warn:#ff8a50;--btn:#3b82e6}}
+:root[data-theme="dark"]{--bg:#10161d;--fg:#e8eef4;--sub:#9aabbb;--girder:#8a9aab;--trolley:#f0b429;--rope:#cfd8e0;--load:#4c9aff;--floor:#27323d;--card:#1a232d;--ok:#3ccf82;--warn:#ff8a50;--btn:#3b82e6}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
+#app{display:flex;flex-direction:column;height:100%;max-width:640px;margin:0 auto}
+#hud{display:flex;gap:6px;padding:8px 10px 0}
+.card{flex:1;background:var(--card);border-radius:10px;padding:6px 8px;text-align:center}
+.card small{display:block;color:var(--sub);font-size:11px}
+.card b{font-size:18px;font-variant-numeric:tabular-nums}
+#stage{flex:1;min-height:0;position:relative}
+canvas{width:100%;height:100%;display:block;touch-action:none}
+#msg{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-weight:700;font-size:15px;min-height:20px}
+#tools{display:flex;gap:8px;padding:4px 10px;align-items:center}
+#tools button{flex:1;padding:8px;border:0;border-radius:8px;background:var(--card);color:var(--fg);font-size:14px;touch-action:manipulation}
+#tools label{font-size:13px;color:var(--sub);white-space:nowrap}
+#pad{display:flex;gap:10px;padding:4px 10px 8px}
+#pad button{flex:1;height:84px;border:0;border-radius:16px;background:var(--btn);color:var(--btnfg);font-size:44px;touch-action:none;-webkit-tap-highlight-color:transparent}
+#hoist{display:flex;flex-direction:column;gap:6px;flex:0 0 76px}
+#pad #hoist button{height:auto;flex:1;font-size:22px;border-radius:12px;background:var(--girder)}
+#pad>button{flex:1}
+#pad button.on{filter:brightness(.75);transform:scale(.97)}
+details{margin:0 10px 8px;background:var(--card);border-radius:10px;padding:6px 10px;font-size:13px;line-height:1.55}
+summary{font-weight:700;cursor:pointer}
+details ol{margin:6px 0 2px;padding-left:20px}
+#tools{flex-wrap:wrap}
+#chk{flex:0 0 100%;display:flex;gap:18px;justify-content:center}
+#tools button{white-space:nowrap}
+#dlg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9;padding:env(safe-area-inset-top,0px) 12px env(safe-area-inset-bottom,0px)}
+#dlg[hidden]{display:none}
+#dlg .box{background:var(--card);color:var(--fg);border-radius:14px;padding:14px;width:100%;max-width:420px;max-height:88%;overflow-y:auto;box-sizing:border-box}
+#dlg h3{margin:0 0 10px}
+.row{display:grid;grid-template-columns:1fr auto;gap:2px 8px;margin-bottom:8px;font-size:13px}
+.row input{grid-column:1/3;width:100%}
+.acts{display:flex;gap:8px;margin-top:10px}
+.acts button{flex:1;padding:10px;border:0;border-radius:8px;background:var(--btn);color:#fff;font-size:14px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <div class="card"><small>振れ角</small><b id="vAng">0.0°</b></div>
+    <div class="card"><small>トロリー位置</small><b id="vPos">0.0 m</b></div>
+    <div class="card"><small>トロリー速度</small><b id="vVel">0.0 m/s</b></div>
+    <div class="card"><small>ロープ長</small><b id="vLen">4.0 m</b></div>
+  </div>
+  <div id="stage"><canvas id="cv"></canvas><div id="msg"></div></div>
+  <div id="tools">
+    <button id="bReset">リセット</button>
+    <button id="bShake">わざと振る</button>
+    <button id="bSet">⚙ 設定</button>
+    <div id="chk">
+      <label><input type="checkbox" id="cHint" checked> ヒント</label>
+      <label><input type="checkbox" id="cPlumb" checked> 垂線・ゲージ</label>
+    </div>
+  </div>
+  <div id="pad">
+    <button id="bL" aria-label="左へ">←</button>
+    <div id="hoist">
+      <button id="bUp" aria-label="巻き上げ">▲</button>
+      <button id="bDn" aria-label="巻き下げ">▼</button>
+    </div>
+    <button id="bR" aria-label="右へ">→</button>
+  </div>
+</div>
+<div id="dlg" hidden><div class="box"><h3>設定</h3><div id="rows"></div><div class="acts"><button id="sDef">初期値に戻す</button><button id="sOk">閉じる</button></div></div></div>
+<script>
+(()=>{
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const $=id=>document.getElementById(id);
+const G=9.8,VIEW=12;
+let DAMP=0.025,ACC=6,BRAKE=6,VMAX=1.0,XLIM=10,LMIN=1.5,LMAX=6,HOIST=1.0,L0=4;
+let L=4,hd=0,lv=0;
+let x=0,v=0,th=0,w=0,dir=0,a=0,calmT=0,W=0,H=0,dpr=1,C={};
+function readColors(){const s=getComputedStyle(document.documentElement);['bg','fg','sub','girder','trolley','rope','load','floor','ok','warn'].forEach(k=>C[k]=s.getPropertyValue('--'+k).trim());}
+function resize(){dpr=window.devicePixelRatio||1;const r=cv.getBoundingClientRect();W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;readColors();}
+addEventListener('resize',resize);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>setTimeout(readColors,50));
+function reset(){x=0;v=0;th=0;w=0;dir=0;a=0;L=Math.max(LMIN,Math.min(LMAX,L0));hd=0;lv=0;calmT=0;$('msg').textContent='';}
+function shake(){const Ls=L;reset();L=Ls;dir=1;const half=Math.PI*Math.sqrt(L/G)*1000;let t=0;const id=setInterval(()=>{t+=50;if(t>half){dir=0;clearInterval(id)}},50);}
+function step(dt){
+  const vt=dir*VMAX;
+  if(dir!==0){a=Math.sign(vt-v)*ACC;if(Math.abs(vt-v)<ACC*dt)a=(vt-v)/dt;}
+  else{a=v===0?0:-Math.sign(v)*BRAKE;if(Math.abs(v)<BRAKE*dt){a=-v/dt;}}
+  let nv=v+a*dt,nx=x+nv*dt;
+  if(nx>XLIM||nx<0){nx=Math.max(0,Math.min(XLIM,nx));a=-v/dt;nv=0;}
+  v=nv;x=nx;
+  lv+=Math.max(-8*dt,Math.min(8*dt,hd*HOIST-lv));
+  let nL=L+lv*dt;if(nL>LMAX||nL<LMIN){nL=Math.max(LMIN,Math.min(LMAX,nL));lv=0;}
+  L=nL;
+  const acc=-(G/L)*Math.sin(th)-(a/L)*Math.cos(th)-DAMP*w-2*(lv/L)*w;
+  w+=acc*dt;th+=w*dt;
+}
+const deg=r=>r*180/Math.PI;
+function draw(){
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+  const s=W/VIEW,cx=W/2,gy=24,railY=gy+8,ty=railY+16;
+  const ps=Math.min(s,(H-ty-130)/LMAX);
+  const ropePx=L*ps;
+  ctx.fillStyle=C.girder;ctx.fillRect(0,gy,W,10);
+  ctx.fillRect(0,gy+10,W,4);
+  ctx.strokeStyle=C.sub;ctx.lineWidth=1;
+  for(let m=0;m<=XLIM;m++){const px=cx+(m-XLIM/2)*s;ctx.beginPath();ctx.moveTo(px,gy-8);ctx.lineTo(px,gy);ctx.stroke();}
+  ctx.fillStyle=C.sub;ctx.font='10px sans-serif';ctx.textAlign='center';
+  for(let m=0;m<=XLIM;m+=2)ctx.fillText(m,cx+(m-XLIM/2)*s,gy-11);
+  ctx.fillStyle='rgba(217,72,15,.25)';ctx.fillRect(cx-XLIM/2*s-6,gy,6,18);ctx.fillRect(cx+XLIM/2*s,gy,6,18);
+  const tx=cx+(x-XLIM/2)*s;
+  ctx.fillStyle=C.trolley;ctx.fillRect(tx-22,railY,44,18);
+  ctx.fillStyle=C.fg;ctx.beginPath();ctx.arc(tx-12,railY+19,4,0,7);ctx.arc(tx+12,railY+19,4,0,7);ctx.fill();
+  const px=tx+Math.sin(th)*ropePx,py=ty+Math.cos(th)*ropePx;
+  const floorY=ty+LMAX*ps+76;
+  ctx.fillStyle=C.floor;ctx.fillRect(0,floorY,W,H-floorY);
+  if($('cPlumb').checked){ctx.strokeStyle=C.sub;ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(tx,floorY);ctx.stroke();ctx.setLineDash([]);}
+  // angle arc
+  if($('cPlumb').checked){ctx.strokeStyle=Math.abs(deg(th))<2?C.ok:C.warn;ctx.lineWidth=2;ctx.beginPath();
+  ctx.arc(tx,ty,32,Math.PI/2,Math.PI/2-th,th>0);ctx.stroke();}
+  // rope
+  ctx.strokeStyle=C.rope;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(px,py);ctx.stroke();
+  // hook + load
+  ctx.save();ctx.translate(px,py);ctx.rotate(-th);ctx.rotate(th);
+  ctx.strokeStyle=C.fg;ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,8,7,-1.2,3.2);ctx.stroke();
+  ctx.strokeStyle=C.rope;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,14);ctx.lineTo(-22,34);ctx.moveTo(0,14);ctx.lineTo(22,34);ctx.stroke();
+  ctx.fillStyle=C.load;ctx.fillRect(-26,34,52,34);
+  ctx.restore();
+  // swing gauge
+  if($('cPlumb').checked){const gw=W*0.7,gx=cx-gw/2,gyy=H-46,range=30;
+  ctx.fillStyle=C.floor;ctx.fillRect(gx,gyy,gw,8);
+  ctx.fillStyle=C.ok;ctx.fillRect(cx-gw*2/range/2,gyy,gw*2/range,8);
+  ctx.fillStyle=C.fg;ctx.fillRect(cx,gyy-3,1.5,14);
+  const gp=cx+Math.max(-range/2,Math.min(range/2,deg(th)))/range*gw;
+  ctx.fillStyle=C.load;ctx.beginPath();ctx.arc(gp,gyy+4,7,0,7);ctx.fill();
+  ctx.fillStyle=C.sub;ctx.font='10px sans-serif';ctx.textAlign='left';ctx.fillText('-15°',gx,gyy-6);ctx.textAlign='right';ctx.fillText('+15°',gx+gw,gyy-6);}
+  // hint
+  if($('cHint').checked&&Math.abs(deg(th))>2.5&&Math.abs(w)<0.12){
+    const d=Math.sign(th);ctx.fillStyle=C.trolley;ctx.font='bold 26px sans-serif';ctx.textAlign='center';
+    ctx.fillText(d>0?'今！ →':'← 今！',Math.max(50,Math.min(W-50,tx+d*70)),ty+60);
+  }
+}
+let last=performance.now();
+function loop(t){
+  let dt=Math.min(0.05,(t-last)/1000);last=t;
+  const n=Math.ceil(dt/0.004);for(let i=0;i<n;i++)step(dt/n);
+  draw();
+  const ang=deg(th);
+  $('vAng').textContent=(ang>=0?'+':'')+ang.toFixed(1)+'°';
+  $('vPos').textContent=x.toFixed(1)+' m';$('vVel').textContent=v.toFixed(1)+' m/s';$('vLen').textContent=L.toFixed(1)+' m';
+  const calm=Math.abs(ang)<0.6&&Math.abs(deg(w))<2&&Math.abs(v)<0.02;
+  calmT=calm?calmT+dt:0;
+  const m=$('msg');
+  if(calmT>0.8){m.textContent='✔ 振れ止め成功！';m.style.color=C.ok;}
+  else if(Math.abs(ang)>12){m.textContent='大きく振れています';m.style.color=C.warn;}
+  else if(m.textContent){m.textContent='';}
+  requestAnimationFrame(loop);
+}
+function bind(id,d){
+  const b=$(id);
+  const on=e=>{e.preventDefault();dir=d;b.classList.add('on');try{b.setPointerCapture(e.pointerId)}catch(_){}};
+  const off=e=>{e.preventDefault();if(dir===d)dir=0;b.classList.remove('on');};
+  b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);
+  b.addEventListener('pointercancel',off);b.addEventListener('lostpointercapture',off);
+  b.addEventListener('contextmenu',e=>e.preventDefault());
+}
+bind('bL',-1);bind('bR',1);
+function bindH(id,d){
+  const b=$(id);
+  const on=e=>{e.preventDefault();hd=d;b.classList.add('on');try{b.setPointerCapture(e.pointerId)}catch(_){}};
+  const off=e=>{e.preventDefault();if(hd===d)hd=0;b.classList.remove('on');};
+  b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);
+  b.addEventListener('pointercancel',off);b.addEventListener('lostpointercapture',off);
+  b.addEventListener('contextmenu',e=>e.preventDefault());
+}
+bindH('bUp',-1);bindH('bDn',1);
+addEventListener('keydown',e=>{if(e.key==='ArrowLeft')dir=-1;if(e.key==='ArrowRight')dir=1;if(e.key==='ArrowUp')hd=-1;if(e.key==='ArrowDown')hd=1;});
+addEventListener('keyup',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight')dir=0;if(e.key==='ArrowUp'||e.key==='ArrowDown')hd=0;});
+$('bReset').onclick=reset;$('bShake').onclick=shake;
+const DEF={vmax:1,accT:.17,brkT:.17,l0:4,lmin:1.5,lmax:6,hoist:1,damp:.025};
+const META=[['vmax','トロリー最高速度 (m/s)',.3,3,.1],['accT','最高速度までの加速時間 (秒)',.05,2,.05],['brkT','停止までの減速時間 (秒)',.05,2,.05],['l0','初期ロープ長 (m)',1.5,6,.1],['lmin','最短ロープ長 (m)',1,5,.1],['lmax','最長ロープ長 (m)',3,8,.1],['hoist','巻き上げ下げ速度 (m/s)',.2,3,.1],['damp','減衰（大きいほど収まりやすい）',0,.2,.005]];
+let S={...DEF};try{Object.assign(S,JSON.parse(localStorage.getItem('craneS')||'{}'))}catch(e){}
+function applyS(){VMAX=S.vmax;ACC=S.vmax/S.accT;BRAKE=S.vmax/S.brkT;L0=S.l0;LMAX=S.lmax;LMIN=Math.min(S.lmin,S.lmax-.5);HOIST=S.hoist;DAMP=S.damp;L=Math.max(LMIN,Math.min(LMAX,L));x=Math.max(0,Math.min(XLIM,x));}
+function save(){try{localStorage.setItem('craneS',JSON.stringify(S))}catch(e){}}
+const syncs=[];
+META.forEach(([k,n,mn,mx,st])=>{const r=document.createElement('div');r.className='row';r.innerHTML='<span>'+n+'</span><b></b><input type="range" min="'+mn+'" max="'+mx+'" step="'+st+'">';const i=r.querySelector('input'),b=r.querySelector('b');const sync=()=>{i.value=S[k];b.textContent=S[k]};sync();syncs.push(sync);i.oninput=()=>{S[k]=+i.value;b.textContent=S[k];applyS();save()};$('rows').appendChild(r);});
+$('bSet').onclick=()=>{$('dlg').hidden=false;dir=0;hd=0;};
+$('sOk').onclick=()=>{$('dlg').hidden=true;};
+$('sDef').onclick=()=>{S={...DEF};syncs.forEach(f=>f());applyS();save();};
+applyS();reset();
+if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})});
+resize();requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
